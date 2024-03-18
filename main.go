@@ -3,13 +3,10 @@ package main
 import (
     "fmt"
     "os"
-	"dmds/kvStore/keyValueStore"
+	"github.com/RaphaelCarl1/dmds/kvStore/ksInterface"
 )
 
 func main() {
-
-    // var kvStore = Create()
-    //kvStore.put(10, 10.0)
     // Open a file for writing. Create it if it doesn't exist, truncate it if it does.
     file, err := os.Create("example.txt")
     if err != nil {
