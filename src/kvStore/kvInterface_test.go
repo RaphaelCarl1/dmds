@@ -4,7 +4,7 @@ import "testing"
 
 //do tests work with zero values?
 var (
-	kvStore      = Create()
+	kvStore      = Create(100)
 	key          uint64 //key cannot be 123, see TestGetNonexistent
 	value        [10]byte
 	driverName   string

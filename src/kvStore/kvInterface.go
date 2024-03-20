@@ -8,7 +8,7 @@ type Data interface {
 }
 
 type Control interface {
-	Create() //Create(string, uint64) for directory & memorySize
+	Create(uint64) //Create(string, uint64) for directory & memorySize
 	Open(string, string)
 	Close()
 	Delete(string)
@@ -22,7 +22,7 @@ type myKeyValueStore struct {
 }
 
 //creates a new kvStore
-func Create() myKeyValueStore {
+func Create(memorySize uint64) myKeyValueStore {
 	return myKeyValueStore{
 		data: make(map[uint64][10]byte),
 	}
