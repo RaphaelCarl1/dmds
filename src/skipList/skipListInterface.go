@@ -1,7 +1,7 @@
 package skipList
 
-type SkipList interface {
-	Create()
+type Data interface {
+	Create(maxHeigt int, probability float64)
 	Insert()
 	//Delete()
 	Print()
@@ -15,17 +15,21 @@ type skipList struct {
 
 type Node struct {
 	nextNode []*Node
-	value    [10]byte
+	value    int
 }
 
-func NewNode(nextNode []*Node, height int, value [10]byte) *Node {
+func NewNode(height int, value int) *Node {
 	return &Node{
 		nextNode: make([]*Node, height),
 		value:    value,
 	}
 }
 
-func NewSkipList(maxHeight int, probability float64) {
-	//create new list
-	//first node & then pointer to next?
+func Create(maxHeight int, probability float64) *skipList{
+	return &skipList{
+		head: NewNode(maxHeight, 0),
+		maxHeight: maxHeight,
+		probability: probability,
+
+	}
 }
