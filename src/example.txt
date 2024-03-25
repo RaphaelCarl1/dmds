@@ -1,1 +1,14 @@
-Hello, world!
+Key: 1, Value: abcdefghij
+Key: 2, Value: klmnopqrst
+Key: 3, Value: uvwxyz1234
+Key: 4, Value: 0987654321
+Key: 5, Value: 1234567890
+Min Key: 1
+Max Key: 5
+Shallow Index: [2 5]
+Sorted Map:
+Key: 3, Value: uvwxyz1234
+Key: 2, Value: klmnopqrst
+Key: 1, Value: abcdefghij
+Key: 5, Value: 1234567890
+Key: 4, Value: 0987654321

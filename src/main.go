@@ -1,38 +1,15 @@
 package main
 
 import (
-    "fmt"
-    "os"
-    "github.com/RaphaelCarl1/dmds/src/kvStore"
-	//"github.com/RaphaelCarl1/dmds/src/kvStore/keyValueStore"
+	keyValueStore "github.com/RaphaelCarl1/dmds/src/kvStore"
 )
 
 func main() {
-    
-    kvStore := keyValueStore.Create(120)
-    var givenValue [10]byte
-    givenValue[0] = 10
-    kvStore.Put(10, givenValue)
-    // Open a file for writing. Create it if it doesn't exist, truncate it if it does.
-    file, err := os.Create("example.txt")
-    if err != nil {
-        fmt.Println("Error:", err)
-        return
-    }
-    defer file.Close()
 
-
-
-    // Write a string to the file
-    _, err = file.WriteString("Hello, world!\n")
-    if err != nil {
-        fmt.Println("Error:", err)
-        return
-    }
-
-    fmt.Println("Data written to file successfully.")
-}
-
-func Create() {
-	panic("unimplemented")
+	kvStore := keyValueStore.Create(5)
+	kvStore.Put(3, [10]byte{'u', 'v', 'w', 'x', 'y', 'z', '1', '2', '3', '4'})
+	kvStore.Put(2, [10]byte{'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't'})
+	kvStore.Put(1, [10]byte{'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'})
+	kvStore.Put(5, [10]byte{'1', '2', '3', '4', '5', '6', '7', '8', '9', '0'})
+	kvStore.Put(4, [10]byte{'0', '9', '8', '7', '6', '5', '4', '3', '2', '1'})
 }
