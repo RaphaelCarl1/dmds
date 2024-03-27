@@ -7,22 +7,19 @@ import (
 	"strings"
 )
 
-//import _ "github.com/go-sql-driver/mysql" - for db-stuff
-
 type Data interface {
 	Put(uint64, [10]byte)
 	Get(uint64) uint64
-	Print(myKeyValueStore)
+	CreateSSTable() //split it up for data manipulation and writing it to a file?
 }
 
 type Control interface {
-	Create(uint64) //Create(string, uint64) for directory & memorySize
+	Create(uint64)
 	Open(string, string)
 	Close()
 	Delete(string)
 }
 
-// creates a new kvStrore with a given directoryName and memorySize
 type myKeyValueStore struct {
 	data map[uint64][10]byte
 }
@@ -31,10 +28,10 @@ type SSTable struct {
 	minKey       uint64
 	maxKey       uint64
 	shallowIndex []uint64
-	skipList     map[uint64][10]byte
+	//skipList     map[uint64][10]byte
 }
 
-// creates a new kvStore
+// creates a new kvStore - memorySize = amount og keys wanted in the
 func Create(memorySize int) *myKeyValueStore {
 	return &myKeyValueStore{
 		data: make(map[uint64][10]byte, memorySize),
@@ -49,6 +46,7 @@ func (kvStore myKeyValueStore) Put(key uint64, value [10]byte) error {
 	}
 	kvStore.data[key] = value
 
+	//limits the size of the kvStore to 5
 	if len(kvStore.data) == 5 {
 		fmt.Println("SkipList is full, creating SSTable...")
 		kvStore.CreateSSTable()
@@ -69,7 +67,9 @@ func (kvStore myKeyValueStore) Get(key uint64) [10]byte {
 	}
 }
 
+// takes the kvStore, creates an SSTable and saves it in a file
 func (kvStore myKeyValueStore) CreateSSTable() {
+	//can be deleted once the Skiplist is implemented
 	keys := make([]uint64, 0, len(kvStore.data))
 	for key := range kvStore.data {
 		keys = append(keys, key)
@@ -77,7 +77,6 @@ func (kvStore myKeyValueStore) CreateSSTable() {
 	sort.Slice(keys, func(i, j int) bool {
 		return keys[i] < keys[j]
 	})
-	fmt.Println("Sorted Key Value Store:")
 	builder := strings.Builder{}
 	for _, key := range keys {
 		fmt.Fprintf(&builder, "Key: %d, Value: %s\n", key, kvStore.data[key])
@@ -86,16 +85,17 @@ func (kvStore myKeyValueStore) CreateSSTable() {
 	for i := 1; i < len(keys); i += 3 {
 		shallowIndex = append(shallowIndex, keys[i])
 	}
+	//creates the SSTable
 	ssTable := SSTable{
 		minKey:       keys[0],
 		maxKey:       keys[len(keys)-1],
 		shallowIndex: shallowIndex,
-		skipList:     kvStore.data,
+		//skipList:     sortedMap,
 	}
-	fmt.Println("SSTable:")
+	//writes it into a file
 	ssTable.Format(&builder)
 
-	file, err := os.Create("example.txt")
+	file, err := os.Create("SSTable.txt")
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
@@ -118,10 +118,10 @@ func (s *SSTable) Format(builder *strings.Builder) {
 	builder.WriteString(fmt.Sprintf("%d\n", s.maxKey))
 	builder.WriteString("Shallow Index: ")
 	builder.WriteString(fmt.Sprintf("%v\n", s.shallowIndex))
-	builder.WriteString("Sorted Map:\n")
+	/*builder.WriteString("Sorted Map:\n")
 	for key, value := range s.skipList {
 		builder.WriteString(fmt.Sprintf("Key: %d, Value: %s\n", key, value))
-	}
+	}*/
 }
 
 // accesses a datbase & establishes connection
