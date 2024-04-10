@@ -5,12 +5,13 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"math/rand"
 )
 
 type Data interface {
 	Put(uint64, [10]byte)
 	Get(uint64) uint64
-	CreateSSTable() //split it up for data manipulation and writing it to a file?
+	CreateSSTable() //split it up for data manipulation and writing it to a file
 }
 
 type Control interface {
@@ -20,10 +21,6 @@ type Control interface {
 	Delete(string)
 }
 
-type myKeyValueStore struct {
-	data map[uint64][10]byte
-}
-
 type SSTable struct {
 	minKey       uint64
 	maxKey       uint64
@@ -31,30 +28,98 @@ type SSTable struct {
 	//skipList     map[uint64][10]byte
 }
 
-// creates a new kvStore - memorySize = amount og keys wanted in the
-func Create(memorySize int) *myKeyValueStore {
-	return &myKeyValueStore{
-		data: make(map[uint64][10]byte, memorySize),
+type SkipList struct {
+	Head   *Node
+	Height int
+	Length int
+}
+
+type Node struct {
+	NextNode []*Node
+	Value    [10]byte
+	Key      uint64
+}
+
+//defines the height of the SkipList
+var MaxHeight = 5
+//defines the length of a SkipList
+var MaxLength = 5
+
+//creates a new, empty SkipList
+func Create(maxHeight int) *SkipList {
+	MaxHeight = maxHeight
+	head := NewNode(0, [10]byte{'0', '0', '0', '0', '0', '0', '0', '0', '0', '0'}, maxHeight)
+	return &SkipList{
+		Head:   head,
+		Height: 1,
 	}
 }
 
-// puts in a new key
-func (kvStore myKeyValueStore) Put(key uint64, value [10]byte) error {
-	//puts a key in the kvStore & creates a new map if there is none
-	if kvStore.data == nil {
-		kvStore.data = make(map[uint64][10]byte)
+//creates a new Node for a SkipList
+func NewNode(key uint64, value [10]byte, height int) *Node {
+	return &Node{
+		NextNode: make([]*Node, height),
+		Value:    value,
+		Key:      key,
 	}
-	kvStore.data[key] = value
+}
 
-	//limits the size of the kvStore to 5
-	if len(kvStore.data) == 5 {
-		fmt.Println("SkipList is full, creating SSTable...")
-		kvStore.CreateSSTable()
+//inserts a new key in the SkipList
+func (skipList *SkipList) Insert(node Node) {
+	updatePointer := make([]*Node, MaxHeight)
+	currentNode := skipList.Head
+
+	for i := skipList.Height; i >= 0; i-- {
+		for currentNode.NextNode[i] != nil && currentNode.NextNode[i].Key < node.Key {
+			currentNode = currentNode.NextNode[i]
+		}
+		updatePointer[i] = currentNode
 	}
+
+	height := rand.Intn(MaxHeight)
+
+	if height > skipList.Height {
+		// Extend updatePointer to accommodate the new height
+		newUpdatePointer := make([]*Node, height+1)
+		copy(newUpdatePointer, updatePointer)
+		for i := skipList.Height + 1; i <= height; i++ {
+			newUpdatePointer[i] = skipList.Head
+		}
+		updatePointer = newUpdatePointer
+		skipList.Height = height
+	}
+
+	newNode := NewNode(node.Key, node.Value, height)
+
+	for i := 0; i < height; i++ {
+		newNode.NextNode[i] = updatePointer[i].NextNode[i]
+		updatePointer[i].NextNode[i] = newNode
+	}
+
+	skipList.Length++
+}
+
+
+
+// puts in a new key
+func (skipList *SkipList) Put(key uint64, value [10]byte) error {
+	newNode :=Node{
+		Value: value,
+		Key: key,
+	}
+	skipList.Insert(newNode)
+
+
+	//limits the size of the kvStore to MaxHeight
+if skipList.Length >= MaxLength {
+	fmt.Println("SkipList length reached 5, creating SSTable...")
+	skipList.CreateSSTable()
+}
 	//return nil if everything went well
 	return nil
 }
 
+/*
 // returns an exisiting key
 func (kvStore myKeyValueStore) Get(key uint64) [10]byte {
 	value, keyExists := kvStore.data[key]
@@ -65,36 +130,50 @@ func (kvStore myKeyValueStore) Get(key uint64) [10]byte {
 		var keyNotFound [10]byte
 		return keyNotFound
 	}
+}*/
+
+func (skipList *SkipList) getAllKeys() []uint64{
+	keys := make([]uint64, 0, skipList.Length)
+	currentNode := skipList.Head.NextNode[0]
+
+	for currentNode != nil {
+		keys = append(keys, currentNode.Key)
+		currentNode = currentNode.NextNode[0]
+	}
+	return keys
+}
+
+func (skipList *SkipList) find(key uint64) *Node {
+	currentNode := skipList.Head
+
+	for i := skipList.Height - 1; i >= 0; i-- {
+		for currentNode.NextNode[i] != nil && currentNode.NextNode[i].Key < key {
+			currentNode = currentNode.NextNode[i]
+		}
+	}
+
+	if currentNode.NextNode[0] != nil && currentNode.NextNode[0].Key == key {
+		return currentNode.NextNode[0]
+	}
+
+	return nil
 }
 
 // takes the kvStore, creates an SSTable and saves it in a file
-func (kvStore myKeyValueStore) CreateSSTable() {
-	//can be deleted once the Skiplist is implemented
-	keys := make([]uint64, 0, len(kvStore.data))
-	for key := range kvStore.data {
-		keys = append(keys, key)
-	}
-	sort.Slice(keys, func(i, j int) bool {
-		return keys[i] < keys[j]
-	})
-	builder := strings.Builder{}
-	for _, key := range keys {
-		fmt.Fprintf(&builder, "Key: %d, Value: %s\n", key, kvStore.data[key])
-	}
-	var shallowIndex []uint64
-	for i := 1; i < len(keys); i += 3 {
-		shallowIndex = append(shallowIndex, keys[i])
-	}
-	//creates the SSTable
-	ssTable := SSTable{
-		minKey:       keys[0],
-		maxKey:       keys[len(keys)-1],
-		shallowIndex: shallowIndex,
-		//skipList:     sortedMap,
-	}
-	//writes it into a file
-	ssTable.Format(&builder)
+func (skipList *SkipList) CreateSSTable() {
+keys := skipList.getAllKeys()
+sort.Slice(keys, func(i, j int) bool {
+	return keys[i] < keys[j]
+})
 
+var builder strings.Builder
+for _, key := range keys {
+	node := skipList.find(key)
+	if node != nil {
+		fmt.Fprintf(&builder, "Key: %d, Value: %s\n", key, string(node.Value[:]))
+	}
+}
+	// Write SSTable content to file
 	file, err := os.Create("SSTable.txt")
 	if err != nil {
 		fmt.Println("Error:", err)
@@ -102,13 +181,13 @@ func (kvStore myKeyValueStore) CreateSSTable() {
 	}
 	defer file.Close()
 
-	// Write a string to the file
 	_, err = file.WriteString(builder.String())
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
 	}
-	fmt.Println("Data written to file successfully.")
+
+	fmt.Println("SSTable created successfully.")
 }
 
 func (s *SSTable) Format(builder *strings.Builder) {
@@ -118,43 +197,4 @@ func (s *SSTable) Format(builder *strings.Builder) {
 	builder.WriteString(fmt.Sprintf("%d\n", s.maxKey))
 	builder.WriteString("Shallow Index: ")
 	builder.WriteString(fmt.Sprintf("%v\n", s.shallowIndex))
-	/*builder.WriteString("Sorted Map:\n")
-	for key, value := range s.skipList {
-		builder.WriteString(fmt.Sprintf("Key: %d, Value: %s\n", key, value))
-	}*/
-}
-
-// accesses a datbase & establishes connection
-func (kvStore myKeyValueStore) Open(driverName string, databaseName string) {
-	//tbd check that the driverName & datbase exist
-	//what happens if already open?
-	/* documenation for implementation: https://pkg.go.dev/database/sql#Open
-	db, error = sql.Open(driverName, databaseName)
-	if, error := nil{
-		log.Fatal(error)
-	}
-	*/
-}
-
-// closes the database and prevent new queries form starting
-func (kvStore myKeyValueStore) Close() error {
-	/* documenation for implementation: https://pkg.go.dev/database/sql#DB.Close
-	error := db.Close()
-	if error != nil{
-		return error
-	} else{
-		return
-	}
-	*/
-	//replace once implemented
-	return nil
-}
-
-// deletes a kvStore
-func (kvStore myKeyValueStore) Delete(directory string) {
-	//checking that the connection to the db is closed
-	kvStore.Close()
-	//tbd check that the kvStore exists (probably not necessary?)
-	//tbd implementation of deleting the kvStore
-	//does it make a difference if in memory or disk?
 }
