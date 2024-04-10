@@ -5,6 +5,8 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"strconv"
+	"bufio"
 	"math/rand"
 )
 
@@ -22,10 +24,9 @@ type Control interface {
 }
 
 type SSTable struct {
-	minKey       uint64
-	maxKey       uint64
-	shallowIndex []uint64
-	//skipList     map[uint64][10]byte
+	MinKey       uint64
+	MaxKey       uint64
+	ShallowIndex []uint64
 }
 
 type SkipList struct {
@@ -44,6 +45,9 @@ type Node struct {
 var MaxHeight = 5
 //defines the length of a SkipList
 var MaxLength = 5
+//defines the interval of the shallow Index
+var ShallowIndex = 3
+
 
 //creates a new, empty SkipList
 func Create(maxHeight int) *SkipList {
@@ -119,18 +123,56 @@ if skipList.Length >= MaxLength {
 	return nil
 }
 
-/*
 // returns an exisiting key
-func (kvStore myKeyValueStore) Get(key uint64) [10]byte {
-	value, keyExists := kvStore.data[key]
-	//returns a key only if it exists
-	if keyExists {
-		return value
-	} else {
-		var keyNotFound [10]byte
-		return keyNotFound
+func (skipList *SkipList) Get(key uint64) (uint64, error) {
+file, err :=os.Open("SSTable.txt")
+if err != nil {
+	return 0, err
+}
+defer file.Close()
+
+scanner := bufio.NewScanner(file)
+for scanner.Scan() {
+	line := scanner.Text()
+	parts := strings.Split(line, ", ")
+	if len(parts) !=2{ continue}
+	keyString := strings.TrimPrefix(parts[0], "Key: ")
+	lineKey, err := strconv.ParseUint(keyString, 10, 64)
+	if err != nil {continue}
+	if lineKey == key {
+		return key, nil
+	} else if lineKey > key {break}
+	fmt.Printf("Key %d was found in the SSTable\n", key)
 	}
-}*/
+	
+
+	/*
+	var minKey, maxKey uint64
+	if strings.HasPrefix(line, "Min Key: ") {
+		minKeyString := strings.TrimPrefix(line, "Min Key: ")
+		minKey, err = strconv.ParseUint(minKeyString, 10, 64)
+		if err != nil {
+			return 0, err
+		}
+	} else if strings.HasPrefix(line, "Max Key: ") {
+		maxKeyStr := strings.TrimPrefix(line, "Max Key: ")
+		maxKey, err = strconv.ParseUint(maxKeyStr, 10, 64)
+		if err != nil {
+			return 0, err
+		}
+		break // Stop reading after parsing Max Key
+	}
+	if err := scanner.Err(); err != nil {
+		return 0, err
+	}
+
+	// Check if the key is within the range [minKey, maxKey]
+	if key >= minKey && key <= maxKey {
+		return true, nil	
+		}
+	}*/
+	return 0, nil
+}
 
 func (skipList *SkipList) getAllKeys() []uint64{
 	keys := make([]uint64, 0, skipList.Length)
@@ -159,12 +201,28 @@ func (skipList *SkipList) find(key uint64) *Node {
 	return nil
 }
 
-// takes the kvStore, creates an SSTable and saves it in a file
+// takes the skipList, creates an SSTable and saves it in a file
 func (skipList *SkipList) CreateSSTable() {
 keys := skipList.getAllKeys()
 sort.Slice(keys, func(i, j int) bool {
 	return keys[i] < keys[j]
 })
+
+var shallowIndex []uint64
+shallowKeys := skipList.getAllKeys()
+for i:= 0; i<len(keys); i += ShallowIndex{
+	shallowIndex = append(shallowIndex, shallowKeys[i])
+}
+
+lastNode := skipList.Head
+for lastNode.NextNode[0] != nil {
+	lastNode = lastNode.NextNode[0]
+}
+ssTable := SSTable{
+	MinKey:       skipList.Head.NextNode[0].Key,
+	MaxKey:       lastNode.Key,
+	ShallowIndex: shallowIndex,	
+}
 
 var builder strings.Builder
 for _, key := range keys {
@@ -173,6 +231,8 @@ for _, key := range keys {
 		fmt.Fprintf(&builder, "Key: %d, Value: %s\n", key, string(node.Value[:]))
 	}
 }
+
+ssTable.Format(&builder)
 	// Write SSTable content to file
 	file, err := os.Create("SSTable.txt")
 	if err != nil {
@@ -192,9 +252,9 @@ for _, key := range keys {
 
 func (s *SSTable) Format(builder *strings.Builder) {
 	builder.WriteString("Min Key: ")
-	builder.WriteString(fmt.Sprintf("%d\n", s.minKey))
+	builder.WriteString(fmt.Sprintf("%d\n", s.MinKey))
 	builder.WriteString("Max Key: ")
-	builder.WriteString(fmt.Sprintf("%d\n", s.maxKey))
+	builder.WriteString(fmt.Sprintf("%d\n", s.MaxKey))
 	builder.WriteString("Shallow Index: ")
-	builder.WriteString(fmt.Sprintf("%v\n", s.shallowIndex))
+	builder.WriteString(fmt.Sprintf("%v\n", s.ShallowIndex))
 }

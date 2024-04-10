@@ -13,9 +13,10 @@ func main() {
 	}
 
 	// Example usage: Insert key-value pairs into SkipList
-	skipList.Put(1, [10]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0})
-	skipList.Put(3, [10]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0})
-	skipList.Put(2, [10]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0})
-	skipList.Put(5, [10]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0})
-	skipList.Put(4, [10]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0})
+	skipList.Put(1, [10]byte{'0', '0', '0', '0', '0', '0', '0', '0', '0', '0'})
+	skipList.Put(3, [10]byte{'0', '0', '0', '0', '0', '0', '0', '0', '0', '0'})
+	skipList.Put(2, [10]byte{'0', '0', '0', '0', '0', '0', '0', '0', '0', '0'})
+	skipList.Put(5, [10]byte{'0', '0', '0', '0', '0', '0', '0', '0', '0', '0'})
+	skipList.Put(4, [10]byte{'0', '0', '0', '0', '0', '0', '0', '0', '0', '0'})
+	skipList.Get(3)
 }
