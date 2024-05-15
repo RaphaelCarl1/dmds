@@ -11,12 +11,12 @@ type Data interface {
 	Get()
 }
 
-type myPHF struct {
-	data map[uint64][10]byte
+type MyPHF struct {
+	data map[uint64]uint64
 }
 
-func Create() myPHF {
-	return myPHF{}
+func Create() MyPHF {
+	return MyPHF{}
 }
 func customHashKey(key uint64, hashes map[uint64]uint64) uint64 {
 	var hash uint64 = 5381
@@ -39,7 +39,7 @@ func customHashKey(key uint64, hashes map[uint64]uint64) uint64 {
 	return hash
 }
 
-func (PHF myPHF) Build(keys []uint64) {
+func (mp MyPHF) Build(keys []uint64) {
 	hashes := make(map[uint64]uint64)
     collisions := make(map[uint64][]uint64)
 
@@ -86,7 +86,7 @@ func (PHF myPHF) Build(keys []uint64) {
     }
 }
 
-func (PHF myPHF) Get(key uint64) uint64 {
+func (mp MyPHF) Get(key uint64) uint64 {
 	//returns a key
 	return key
 }

@@ -1,5 +1,7 @@
 package main
 
+import "phf/phf"
+
 /*
 import (
     "fmt"
@@ -7,25 +9,23 @@ import (
 	"os"
 )
 
-/*
-
 func customHashKey(key [10]byte, hashes map[uint64][10]byte) uint64 {
 	var hash uint64 = 5381
 	for _, b := range key {
 		hash = ((hash << 5) + hash + uint64(b)) % 10 // Limit the hash value to 100 slots
 	}
-	
+
 	// Linear probing: if the slot is occupied, check the next one
 	originalHash := hash
 	for _, exists := hashes[hash]; exists; _, exists = hashes[hash] {
 		hash = (hash + 1) % 10 // Wrap around to the start if we reach the end
-	
+
 		// If we've checked all the slots and they're all full, break the loop
 		if hash == originalHash {
 			break
 		}
 	}
-	
+
 	return hash
 }
 
@@ -77,14 +77,15 @@ func build(keys [][10]byte) {
     }
 }
 */
-import (
-	phf "github.com/RaphaelCarl1/dmds/src/phf"
-)
+
 
 func main() {
-	keys := make([][10]byte, 20) // Adjust this to the number of keys you want to test
+	keys := make([]uint64, 20) // Adjust this to the number of keys you want to test
 	for i := 0; i < 20; i++ {
 		keys[i] = [10]byte{byte(i & 0xff), byte((i >> 8) & 0xff), byte((i >> 16) & 0xff), 0, 0, 0, 0, 0, 0, 0}
 	}
-	phf.Build(keys) // Call the Build function from the phf package
+    mp := phf.Create()
+    mp.Build(keys)
+
+	//phf.Build(keys) // Call the Build function from the phf package
 }

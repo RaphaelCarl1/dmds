@@ -3,7 +3,7 @@ package phf
 import "testing"
 
 var (
-	phfTable myPHF
+	phfTable MyPHF
 	keys     = make([]uint64, 5)
 )
 
