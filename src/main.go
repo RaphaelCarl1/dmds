@@ -77,8 +77,9 @@ func build(keys [][10]byte) {
     }
 }
 */
-
-import "./phf" // Import the package that contains the phf symbol
+import (
+	phf "github.com/RaphaelCarl1/dmds/src/phf"
+)
 
 func main() {
 	keys := make([][10]byte, 20) // Adjust this to the number of keys you want to test
