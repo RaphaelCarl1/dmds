@@ -1,20 +1,25 @@
-Slot 0: Key [7 0 0 0 0 0 0 0 0 0]
-Slot 1: Key [4 0 0 0 0 0 0 0 0 0]
-Slot 2: Key [1 0 0 0 0 0 0 0 0 0]
-Slot 3: Key [8 0 0 0 0 0 0 0 0 0]
-Slot 4: Key [5 0 0 0 0 0 0 0 0 0]
-Slot 5: Key [2 0 0 0 0 0 0 0 0 0]
-Slot 6: Key [9 0 0 0 0 0 0 0 0 0]
-Slot 7: Key [6 0 0 0 0 0 0 0 0 0]
-Slot 8: Key [3 0 0 0 0 0 0 0 0 0]
-Slot 9: Key [0 0 0 0 0 0 0 0 0 0]
-Hash 6 is shared by keys [[19 0 0 0 0 0 0 0 0 0]]
-Hash 5 is shared by keys [[12 0 0 0 0 0 0 0 0 0]]
-Hash 2 is shared by keys [[11 0 0 0 0 0 0 0 0 0]]
-Hash 8 is shared by keys [[13 0 0 0 0 0 0 0 0 0]]
-Hash 1 is shared by keys [[14 0 0 0 0 0 0 0 0 0]]
-Hash 4 is shared by keys [[15 0 0 0 0 0 0 0 0 0]]
-Hash 7 is shared by keys [[16 0 0 0 0 0 0 0 0 0]]
-Hash 0 is shared by keys [[17 0 0 0 0 0 0 0 0 0]]
-Hash 3 is shared by keys [[18 0 0 0 0 0 0 0 0 0]]
-Hash 9 is shared by keys [[10 0 0 0 0 0 0 0 0 0]]
+Slot 0: Key 2
+Slot 1: Key 15
+Slot 2: Key 3
+Slot 3: Key 16
+Slot 4: Key 4
+Slot 5: Key 17
+Slot 6: Key 5
+Slot 7: Key 18
+Slot 8: Key 6
+Slot 9: Key 19
+Slot 10: Key 7
+Slot 11: Key 20
+Slot 12: Key 8
+Slot 13: Key 21
+Slot 14: Key 9
+Slot 15: Key 22
+Slot 16: Key 10
+Slot 17: Key 23
+Slot 18: Key 11
+Slot 19: Key 24
+Slot 20: Key 12
+Slot 21: Key 0
+Slot 22: Key 13
+Slot 23: Key 1
+Slot 24: Key 14

@@ -1,95 +1,102 @@
 package phf
 
 import (
-    "fmt"
-    "sort"
+	"fmt"
 	"os"
+	"sort"
 )
 
 type Data interface {
-	Build()
-	Get()
+	Build(keys []uint64)
+	Get(key uint64)
 }
 
 type MyPHF struct {
 	data map[uint64]uint64
 }
 
+const NumberOfSlots = 25
+
 func Create() MyPHF {
 	return MyPHF{}
 }
 func customHashKey(key uint64, hashes map[uint64]uint64) uint64 {
 	var hash uint64 = 5381
-    for i := 0; i < 64; i += 8 {
-        b := byte((key >> i) & 0xff) // Extract a byte from the key
-        hash = ((hash << 5) + hash + uint64(b)) % 10 // Limit the hash value to 10 slots
-    }
-	
+	for i := 0; i < 64; i += 8 {
+		b := byte((key >> i) & 0xff)
+		hash = ((hash << 5) + hash + uint64(b)) % NumberOfSlots
+	}
+
 	// Linear probing: if the slot is occupied, check the next one
 	originalHash := hash
 	for _, exists := hashes[hash]; exists; _, exists = hashes[hash] {
-		hash = (hash + 1) % 10 // Wrap around to the start if we reach the end
-	
-		// If we've checked all the slots and they're all full, break the loop
+		hash = (hash + 1) % NumberOfSlots
+
 		if hash == originalHash {
 			break
 		}
 	}
-	
+
 	return hash
 }
 
-func (mp MyPHF) Build(keys []uint64) {
-	hashes := make(map[uint64]uint64)
-    collisions := make(map[uint64][]uint64)
+func (mp *MyPHF) Build(keys []uint64) error {
+	mp.data = make(map[uint64]uint64)
+	collisions := make(map[uint64][]uint64)
 
-    for _, key := range keys {
-        hash := customHashKey(key, hashes)
+	for _, key := range keys {
+		hash := customHashKey(key, mp.data)
 
-        if _, exists := hashes[hash]; exists {
-            collisions[hash] = append(collisions[hash], key)
-        } else {
-            hashes[hash] = key
-        }
-    }
+		// Check if the hash value is out of bounds
+		if hash >= NumberOfSlots {
+			return fmt.Errorf("hash value %d is out of bounds", hash)
+		}
 
-    // Create a slice of the keys
-    hashKeys := make([]int, 0, len(hashes))
-    for k := range hashes {
-        hashKeys = append(hashKeys, int(k))
-    }
+		if _, exists := mp.data[hash]; exists {
+			collisions[hash] = append(collisions[hash], key)
+		} else {
+			mp.data[hash] = key
+		}
+	}
 
-    // Sort the keys
-    sort.Ints(hashKeys)
-    // Print the keys and values in order
-    for _, k := range hashKeys {
-        fmt.Printf("Slot %d: Key %v\n", k, hashes[uint64(k)])
-    }
+	// Create a slice of the keys
+	hashKeys := make([]int, 0, len(mp.data))
+	for k := range mp.data {
+		hashKeys = append(hashKeys, int(k))
+	}
 
-    for hash, keys := range collisions {
-        fmt.Printf("Hash %d is shared by keys %v\n", hash, keys)
-    }
+	sort.Ints(hashKeys)
+
+	for hash, keys := range collisions {
+		fmt.Printf("Hash %d is shared by keys %v\n", hash, keys)
+	}
 	file, err := os.Create("phf.txt")
-    if err != nil {
-        fmt.Println("Unable to create file:", err)
-        return
-    }
-    defer file.Close()
+	if err != nil {
+		fmt.Println("Unable to create file:", err)
+		return nil
+	}
+	defer file.Close()
 
-    // Write the keys and values in order to the file
-    for _, k := range hashKeys {
-        fmt.Fprintf(file, "Slot %d: Key %v\n", k, hashes[uint64(k)])
-    }
+	// writes the keys and values to the file - for testing
+	for _, k := range hashKeys {
+		fmt.Fprintf(file, "Slot %d: Key %v\n", k, mp.data[uint64(k)])
+	}
 
-    for hash, keys := range collisions {
-        fmt.Fprintf(file, "Hash %d is shared by keys %v\n", hash, keys)
-    }
+	for hash, keys := range collisions {
+		fmt.Fprintf(file, "Hash %d is shared by keys %v\n", hash, keys)
+	}
+	return nil
 }
 
-func (mp MyPHF) Get(key uint64) uint64 {
-	//returns a key
-	return key
-}
+func (mp MyPHF) Get(key uint64) (uint64, error) {
+	if mp.data == nil {
+		return 0, fmt.Errorf("data map is not initialized")
+	}
 
-/*I am aware that this looks very minimalistic, as the implementation I have in mind does
-not require a lot of functions.*/
+	hash := customHashKey(key, mp.data)
+
+	if _, exists := mp.data[hash]; !exists {
+		return 0, fmt.Errorf("key %d does not exist", key)
+	}
+	return hash, nil
+}

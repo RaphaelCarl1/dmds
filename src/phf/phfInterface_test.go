@@ -44,7 +44,7 @@ func TestBuildNull(t *testing.T) {
 func TestBuildValidKeys(t *testing.T) {
 	phfTable.Build(keys)
 	key := uint64(2)
-	result := phfTable.Get(key)
+	result, _ := phfTable.Get(key)
 
 	if result != key {
 		t.Errorf("Expected result should be %d, and not %d", key, result)
@@ -56,7 +56,7 @@ func TestBuildMultipleTimes(t *testing.T) {
 	phfTable.Build(keys)
 	phfTable.Build(keys)
 	key := uint64(2)
-	result := phfTable.Get(key)
+	result, _ := phfTable.Get(key)
 
 	if result != key {
 		t.Errorf("Expected result should be %d, and not %d", key, result)
@@ -67,7 +67,7 @@ func TestBuildMultipleTimes(t *testing.T) {
 func TestGetExistingKey(t *testing.T) {
 	phfTable.Build(keys)
 	key := uint64(2)
-	result := phfTable.Get(key)
+	result, _ := phfTable.Get(key)
 
 	if result != key {
 		t.Errorf("Expected result should be %d, and not %d", key, result)
@@ -77,7 +77,7 @@ func TestGetExistingKey(t *testing.T) {
 func TestGetNullKey(t *testing.T) {
 	phfTable.Build(keys)
 	key := uint64(0)
-	result := phfTable.Get(key)
+	result, _ := phfTable.Get(key)
 
 	if result != key {
 		t.Errorf("Expected result should be %d, and not %d", key, result)
@@ -87,7 +87,7 @@ func TestGetNullKey(t *testing.T) {
 func TestGetNonExistentKey(t *testing.T) {
 	phfTable.Build(keys)
 	key := uint64(6)
-	result := phfTable.Get(key)
+	result, _ := phfTable.Get(key)
 
 	if result != 0 {
 		t.Errorf("Expected result should be error, but got %d", result)
