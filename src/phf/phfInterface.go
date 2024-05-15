@@ -47,7 +47,6 @@ func (mp *MyPHF) Build(keys []uint64) error {
 	for _, key := range keys {
 		hash := customHashKey(key, mp.data)
 
-		// Check if the hash value is out of bounds
 		if hash >= NumberOfSlots {
 			return fmt.Errorf("hash value %d is out of bounds", hash)
 		}
@@ -59,7 +58,6 @@ func (mp *MyPHF) Build(keys []uint64) error {
 		}
 	}
 
-	// Create a slice of the keys
 	hashKeys := make([]int, 0, len(mp.data))
 	for k := range mp.data {
 		hashKeys = append(hashKeys, int(k))

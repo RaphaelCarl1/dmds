@@ -6,7 +6,7 @@ import (
     "math/rand"
 )
 func main() {
-	keys := make([]uint64, phf.NumberOfSlots) // Adjust this to the number of keys you want to test
+	keys := make([]uint64, phf.NumberOfSlots)
     for i := 0; i < phf.NumberOfSlots; i++ {
         keys[i] = uint64(i)
     }
@@ -17,7 +17,6 @@ func main() {
     }
 
     for i := 0; i < 5; i++ {
-        // Generate a random key in the range of the number of slots
         key := uint64(rand.Intn(phf.NumberOfSlots))
         slot, err := mp.Get(key)
         if err != nil {
