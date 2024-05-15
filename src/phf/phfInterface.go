@@ -1,19 +1,29 @@
-package main
+package phf
 
-/*
 import (
     "fmt"
     "sort"
 	"os"
 )
 
-/*
+type Data interface {
+	Build()
+	Get()
+}
 
-func customHashKey(key [10]byte, hashes map[uint64][10]byte) uint64 {
+type myPHF struct {
+	data map[uint64][10]byte
+}
+
+func Create() myPHF {
+	return myPHF{}
+}
+func customHashKey(key uint64, hashes map[uint64]uint64) uint64 {
 	var hash uint64 = 5381
-	for _, b := range key {
-		hash = ((hash << 5) + hash + uint64(b)) % 10 // Limit the hash value to 100 slots
-	}
+    for i := 0; i < 64; i += 8 {
+        b := byte((key >> i) & 0xff) // Extract a byte from the key
+        hash = ((hash << 5) + hash + uint64(b)) % 10 // Limit the hash value to 10 slots
+    }
 	
 	// Linear probing: if the slot is occupied, check the next one
 	originalHash := hash
@@ -29,9 +39,9 @@ func customHashKey(key [10]byte, hashes map[uint64][10]byte) uint64 {
 	return hash
 }
 
-func build(keys [][10]byte) {
-    hashes := make(map[uint64][10]byte)
-    collisions := make(map[uint64][][10]byte)
+func (PHF myPHF) Build(keys []uint64) {
+	hashes := make(map[uint64]uint64)
+    collisions := make(map[uint64][]uint64)
 
     for _, key := range keys {
         hash := customHashKey(key, hashes)
@@ -51,7 +61,6 @@ func build(keys [][10]byte) {
 
     // Sort the keys
     sort.Ints(hashKeys)
-
     // Print the keys and values in order
     for _, k := range hashKeys {
         fmt.Printf("Slot %d: Key %v\n", k, hashes[uint64(k)])
@@ -76,14 +85,11 @@ func build(keys [][10]byte) {
         fmt.Fprintf(file, "Hash %d is shared by keys %v\n", hash, keys)
     }
 }
-*/
 
-import "./phf" // Import the package that contains the phf symbol
-
-func main() {
-	keys := make([][10]byte, 20) // Adjust this to the number of keys you want to test
-	for i := 0; i < 20; i++ {
-		keys[i] = [10]byte{byte(i & 0xff), byte((i >> 8) & 0xff), byte((i >> 16) & 0xff), 0, 0, 0, 0, 0, 0, 0}
-	}
-	phf.Build(keys) // Call the Build function from the phf package
+func (PHF myPHF) Get(key uint64) uint64 {
+	//returns a key
+	return key
 }
+
+/*I am aware that this looks very minimalistic, as the implementation I have in mind does
+not require a lot of functions.*/
