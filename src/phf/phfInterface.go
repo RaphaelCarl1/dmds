@@ -1,100 +1,97 @@
 package phf
 
 import (
-	"fmt"
-	"os"
-	"sort"
+    "fmt"
+    "os"
 )
 
 type Data interface {
-	Build(keys []uint64)
-	Get(key uint64)
+    Build(keys []uint64)
+    Get(key uint64)
 }
 
 type MyPHF struct {
-	data map[uint64]uint64
+    data    map[uint64]uint64
+    hashes  map[uint64]uint64
+    numKeys int
 }
 
-const NumberOfSlots = 25
-
-func Create() MyPHF {
-	return MyPHF{}
+func Create(numKeys int) MyPHF {
+    return MyPHF{
+        data:    make(map[uint64]uint64),
+        hashes:  make(map[uint64]uint64),
+        numKeys: numKeys * 2,
+    }
 }
-func customHashKey(key uint64, hashes map[uint64]uint64) uint64 {
-	var hash uint64 = 5381
-	for i := 0; i < 64; i += 8 {
-		b := byte((key >> i) & 0xff)
-		hash = ((hash << 5) + hash + uint64(b)) % NumberOfSlots
-	}
 
-	// Linear probing: if the slot is occupied, check the next one
-	originalHash := hash
-	for _, exists := hashes[hash]; exists; _, exists = hashes[hash] {
-		hash = (hash + 1) % NumberOfSlots
+func secondaryHashKey(key uint64, numKeys int) uint64 {
+    // Simple secondary hash function, you can replace this with something more complex if needed
+    return (key % uint64(numKeys-1)) + 1
+}
 
-		if hash == originalHash {
-			break
-		}
-	}
+func primaryHashKey(key uint64, numKeys int) uint64 {
+    // Constants for the multiply-shift method
+    const multiplier = 11400714819323198485
+    const shift = 32
 
-	return hash
+    return (key * multiplier) >> (64 - shift) % uint64(numKeys)
 }
 
 func (mp *MyPHF) Build(keys []uint64) error {
-	mp.data = make(map[uint64]uint64)
-	collisions := make(map[uint64][]uint64)
+    mp.data = make(map[uint64]uint64)
+    mp.hashes = make(map[uint64]uint64)
 
-	for _, key := range keys {
-		hash := customHashKey(key, mp.data)
+    for _, key := range keys {
+        hash := primaryHashKey(key, mp.numKeys)
 
-		if hash >= NumberOfSlots {
-			return fmt.Errorf("hash value %d is out of bounds", hash)
-		}
+        if hash >= uint64(mp.numKeys) {
+            return fmt.Errorf("hash value %d is out of bounds", hash)
+        }
 
-		if _, exists := mp.data[hash]; exists {
-			collisions[hash] = append(collisions[hash], key)
-		} else {
-			mp.data[hash] = key
-		}
-	}
+        // If the slot is already occupied, it means there's a collision
+        if _, exists := mp.hashes[hash]; exists {
+            // Use double hashing to find a new slot for the key
+            step := secondaryHashKey(key, mp.numKeys)
+            originalHash := hash
+            for _, exists = mp.hashes[hash]; exists; _, exists = mp.hashes[hash] {
+                hash = (hash + step) % uint64(mp.numKeys)
 
-	hashKeys := make([]int, 0, len(mp.data))
-	for k := range mp.data {
-		hashKeys = append(hashKeys, int(k))
-	}
+                if hash == originalHash {
+                    return fmt.Errorf("all slots are full")
+                }
+            }
+        }
 
-	sort.Ints(hashKeys)
+        // Insert the key into the found slot
+        mp.hashes[hash] = key
+        mp.data[key] = key
+    }
 
-	for hash, keys := range collisions {
-		fmt.Printf("Hash %d is shared by keys %v\n", hash, keys)
-	}
-	file, err := os.Create("phf.txt")
-	if err != nil {
-		fmt.Println("Unable to create file:", err)
-		return nil
-	}
-	defer file.Close()
+    file, err := os.Create("phf.txt")
+    if err != nil {
+        fmt.Println("Unable to create file:", err)
+        return nil
+    }
+    defer file.Close()
 
-	// writes the keys and values to the file - for testing
-	for _, k := range hashKeys {
-		fmt.Fprintf(file, "Slot %d: Key %v\n", k, mp.data[uint64(k)])
-	}
+    // writes the keys and values to the file - for testing
+    for k, v := range mp.data {
+        fmt.Fprintf(file, "Slot %d: Key %v\n", k, v)
+    }
 
-	for hash, keys := range collisions {
-		fmt.Fprintf(file, "Hash %d is shared by keys %v\n", hash, keys)
-	}
-	return nil
+    return nil
 }
 
-func (mp MyPHF) Get(key uint64) (uint64, error) {
-	if mp.data == nil {
-		return 0, fmt.Errorf("data map is not initialized")
-	}
+func (mp *MyPHF) Get(key uint64) (uint64, error) {
+    if mp.data == nil {
+        return 0, fmt.Errorf("data map is not initialized")
+    }
 
-	hash := customHashKey(key, mp.data)
-
-	if _, exists := mp.data[hash]; !exists {
-		return 0, fmt.Errorf("key %d does not exist", key)
-	}
-	return hash, nil
+    if value, exists := mp.data[key]; exists {
+        // Found the key
+        return value, nil
+    } else {
+        // The key does not exist
+        return 0, fmt.Errorf("key %d does not exist", key)
+    }
 }
