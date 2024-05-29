@@ -15,7 +15,7 @@ type HashAndDisplace struct {
 	table      []uint64
 	g          []uint64
 	primaryH   func(uint64) uint64
-	//secondaryH func(uint64) uint64
+	secondaryH func(uint64) uint64
 }
 
 func (hd *HashAndDisplace) PrintToFile(filename string) {
@@ -55,10 +55,11 @@ func (hd *HashAndDisplace) PrintToFile(filename string) {
 
 func NewHashAndDisplace(keys []uint64) *HashAndDisplace {
 	hd := &HashAndDisplace{
-		keys:  keys,
-		n:     uint64(len(keys)),
-		table: make([]uint64, 2*uint64(len(keys))), // make the hash table twice as large
-		g:     make([]uint64, 2*uint64(len(keys))),
+		keys:       keys,
+		n:          uint64(len(keys)),
+		table:      make([]uint64, 2*uint64(len(keys))), //Makes the hash table twice as large
+		g:          make([]uint64, 2*uint64(len(keys))),
+		secondaryH: generateSecondaryHashFunction(uint64(time.Now().UnixNano())), //Initialize secondaryH
 	}
 	hd.construct()
 	return hd
@@ -79,65 +80,132 @@ func generateHashFunction(seed uint64) func(uint64) uint64 {
 	}
 }
 
+func generateSecondaryHashFunction(seed uint64) func(uint64) uint64 {
+	s := rand.NewSource(int64(seed))
+	r := rand.New(s)
+	var a, b uint64
+	for a == 0 {
+		a = r.Uint64()
+	}
+	for b == 0 {
+		b = r.Uint64()
+	}
+	return func(x uint64) uint64 {
+		return (a*x + b) % prime
+	}
+}
+
 func (hd *HashAndDisplace) construct() {
-	collision := true
-	for collision {
-		fmt.Println("Generating new primary hash function...")
-		h := generateHashFunction(uint64(time.Now().UnixNano())) // Unique seed for each iteration
-		hd.primaryH = h
-		collision = false
+    hd.primaryH = generateHashFunction(uint64(time.Now().UnixNano())) // Unique seed for each iteration
+    hd.table = make([]uint64, 2*hd.n)
+    hd.g = make([]uint64, 2*hd.n)
+    buckets := make([][]uint64, 2*hd.n)
+    for _, key := range hd.keys {
+        slot := hd.primaryH(key) % uint64(len(buckets)) //Ensures slot is within bounds
+        buckets[slot] = append(buckets[slot], key)
+    }
+    for i, bucket := range buckets {
+        if len(bucket) > 0 {
+            hg := generateHashFunction(uint64(time.Now().UnixNano())) // Unique seed for each bucket
+            for _, key := range bucket {
+                slot := hg(key) % uint64(len(hd.table))
+                offset := hd.secondaryH(key) // Secondary hash function
+                for hd.table[slot] != 0 {
+                    slot = (slot + offset) % uint64(len(hd.table)) // Double hashing
+                }
+                hd.table[slot] = key
+            }
+            hd.g[i] = hg(bucket[0]) // Store the secondary hash function
+        }
+    }
+}
+
+func (hd *HashAndDisplace) Get(key uint64) (uint64, bool) {
+	index := hd.primaryH(key) % uint64(len(hd.table))
+	if hd.table[index] == key {
+		//fmt.Println("Key found at primary position")
+		return hd.table[index], true
+	}
+
+	secondaryIndex := (index + hd.g[index]) % uint64(len(hd.table))
+	if hd.table[secondaryIndex] == key {
+		//fmt.Println("Key found at secondary position")
+		return hd.table[secondaryIndex], true
+	}
+	return 0, false
+}
+
+func GenerateUniqueKeys(n int) []uint64 {
+	keys := make([]uint64, 0, n)
+	seen := make(map[uint64]bool)
+
+	for len(keys) < n {
+		key := rand.Uint64() // Generate a random key
+		if !seen[key] {      // If the key hasn't been seen before
+			seen[key] = true         // Mark the key as seen
+			keys = append(keys, key) // Add the key to the keys slice
+		}
+	}
+
+	return keys
+}
+
+/* old version
+
+func (hd *HashAndDisplace) construct() {
+	constructStart:
+		hd.primaryH = generateHashFunction(uint64(time.Now().UnixNano())) // Unique seed for each iteration
+		fmt.Println("Primary hash function generated.")
 		hd.table = make([]uint64, 2*hd.n)
 		hd.g = make([]uint64, 2*hd.n)
 		buckets := make([][]uint64, 2*hd.n)
 		for _, key := range hd.keys {
-			slot := h(key) % uint64(len(buckets)) // Ensure slot is within bounds
+			slot := hd.primaryH(key) % uint64(len(buckets)) //Ensures slot is within bounds
+			for slot == 0 {
+				hd.primaryH = generateHashFunction(uint64(time.Now().UnixNano())) // Unique seed for each iteration
+				slot = hd.primaryH(key) % uint64(len(buckets))
+			}
 			buckets[slot] = append(buckets[slot], key)
 		}
 		for i, bucket := range buckets {
 			if len(bucket) > 1 {
-				fmt.Printf("Collision detected at slot %d, generating secondary hash function...\n", i)
-				hg := generateHashFunction(uint64(time.Now().UnixNano())) // Unique seed for each bucket
-				for _, key := range bucket {
-					secondarySlot := (h(key) + hg(key)) % (2 * hd.n)
-					if hd.table[secondarySlot] != 0 {
-						collision = true
-						fmt.Printf("Collision detected with secondary hash function at slot %d, regenerating primary hash function...\n", i)
-						break
-					} else {
-						hd.table[secondarySlot] = key
-						hd.g[secondarySlot] = hg(key)
+				collision := true
+				for collision {
+					collision = false
+					hg := generateHashFunction(uint64(time.Now().UnixNano())) // Unique seed for each bucket
+					secondaryTable := make([]uint64, len(bucket)*len(bucket)) // Secondary hash table
+					for _, key := range bucket {
+						secondarySlot := hg(key) % uint64(len(secondaryTable))
+						if secondaryTable[secondarySlot] != 0 {
+							collision = true
+							break
+						} else {
+							secondaryTable[secondarySlot] = key
+						}
+					}
+					if !collision {
+						// Check if the slot in the main hash table is unoccupied
+						secondarySlot := hg(bucket[0]) % uint64(len(hd.table))
+						if hd.table[secondarySlot] == 0 {
+							hd.g[i-1] = hg(bucket[0]) // Store the secondary hash function
+							for _, key := range bucket {
+								hd.table[hg(key)%uint64(len(hd.table))] = key
+							}
+						} else {
+							collision = true
+						}
 					}
 				}
-				if collision {
-					break
-				}
+				fmt.Printf("Collisions resolved for bucket %d.\n", i)
 			} else if len(bucket) == 1 {
-				pos := h(bucket[0]) % (2 * hd.n)
+				pos := hd.primaryH(bucket[0]) % (2 * hd.n)
 				if hd.table[pos] != 0 {
-					collision = true
-					fmt.Printf("Unexpected collision at slot %d, regenerating primary hash function...\n", i)
-					break
+					goto constructStart
 				}
 				hd.table[pos] = bucket[0]
-				hd.g[pos] = h(bucket[0])
+				hd.g[pos] = 0 // No secondary hash function needed
 			}
 		}
 	}
-	fmt.Println("Hash functions generated successfully, no collisions.")
-}
 
-// checks if the key exists in the hash table
-func (hd *HashAndDisplace) Query(key uint64) bool {
-	if hd == nil || hd.primaryH == nil {
-		fmt.Println("Error: HashAndDisplace or its hash functions are nil")
-		return false
-	}
-	tableSize := uint64(len(hd.table))
-	index := hd.primaryH(key) % tableSize
-	if hd.table[index] == key {
-		return true
-	}
-	displacement := hd.g[index]
-	pos := (index + displacement) % tableSize
-	return hd.table[pos] == key
-}
+*/

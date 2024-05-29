@@ -4,90 +4,45 @@ import (
 	"fmt"
 	"math/rand"
 	"phf/phf"
+	"time"
 )
 
 func main() {
-	// Generate 100 random keys
-	keys := make([]uint64, 50)
-	for i := range keys {
-		keys[i] = rand.Uint64()
-	}
+	//Generates random keys
+	keys := phf.GenerateUniqueKeys(1000000)
 
-	// Create a new HashAndDisplace
+	// Measure the time it takes to execute NewHashAndDisplace
+	start1 := time.Now()
 	hd := phf.NewHashAndDisplace(keys)
+	elapsed1 := time.Since(start1)
+	fmt.Printf("NewHashAndDisplace took %s\n", elapsed1)
+
 	hd.PrintToFile("phf.txt")
 
-	// Query 5 random keys
-	for i := 0; i < 100; i++ {
+	// Measure the time it takes to get 10 keys
+	start2 := time.Now()
+	for i := 0; i < 1000; i++ {
 		key := keys[rand.Intn(len(keys))] // Pick a random key
-		if hd.Query(key) {                // Check if the key exists in the hash table
-			fmt.Printf("Key %d found\n", key)
-		} else {
-			fmt.Printf("Key %d not found\n", key)
-		}
+		hd.Get(key)
 	}
+	elapsed2 := time.Since(start2)
+	fmt.Printf("Getting 10 keys took %s\n", elapsed2)
+
+	// Measure time for 100 gets
+	start3 := time.Now()
+	for i := 0; i < 10000; i++ {
+		key := keys[rand.Intn(len(keys))] // Pick a random key
+		hd.Get(key)
+	}
+	elapsed3 := time.Since(start3)
+	fmt.Printf("Getting 100 keys took %s\n", elapsed3)
+
+	// Measure time for 1000 gets
+	start4 := time.Now()
+	for i := 0; i < 100000; i++ {
+		key := keys[rand.Intn(len(keys))] // Pick a random key
+		hd.Get(key)
+	}
+	elapsed4 := time.Since(start4)
+	fmt.Printf("Getting 1000 keys took %s\n", elapsed4)
 }
-
-/*
-OLD VERSION
------------------
-func main() {
-    for _, numKeys := range []int{1000, 100000, 1000000} {
-        keys := make([]uint64, numKeys)
-        for i := 0; i < numKeys; i++ {
-            keys[i] = uint64(i)
-        }
-        bt := &phf.BinaryTree{}
-
-        // Measure the time taken to insert keys
-        startInsert := time.Now()
-        for _, key := range keys {
-            bt.Insert(key)
-        }
-        elapsedInsert := time.Since(startInsert)
-        fmt.Printf("Time taken to insert %d keys: %s\n", numKeys, elapsedInsert)
-
-        // Measure the time taken to search for keys
-        startSearch := time.Now()
-        for _, key := range keys {
-            bt.Search(key)
-        }
-        elapsedSearch := time.Since(startSearch)
-        fmt.Printf("Time taken to search for %d keys: %s\n", numKeys, elapsedSearch)
-
-        // Measure the time taken for InOrder traversal
-        startInOrder := time.Now()
-        bt.InOrder()
-        elapsedInOrder := time.Since(startInOrder)
-        fmt.Printf("Time taken for InOrder traversal with %d keys: %s\n", numKeys, elapsedInOrder)
-
-        // Existing code
-        mp := phf.Create(numKeys*2)
-
-        startBuild := time.Now()
-        err := mp.Build(keys)
-        elapsed := time.Since(startBuild)
-
-        if err != nil {
-            fmt.Println("Error:", err)
-        } else {
-            fmt.Printf("Time taken to build with %d keys: %s\n", numKeys, elapsed)
-        }
-
-        for _, numGets := range []int{1000, 100000, 1000000} {
-            start := time.Now()
-
-            for i := 0; i < numGets; i++ {
-                index := rand.Intn(numKeys)
-                key := keys[index]
-                _, err := mp.Get(key)
-                if err != nil {
-                    fmt.Println("Error:", err)
-                }
-            }
-            elapsed := time.Since(start)
-            fmt.Printf("Time taken by %d Get() operations with %d keys: %s\n", numGets, numKeys, elapsed)
-        }
-    }
-}
-*/
